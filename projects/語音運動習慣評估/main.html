@@ -1,0 +1,138 @@
+import speech_recognition as sr
+from google.cloud import speech_v1
+import json
+import re
+from datetime import datetime, timedelta
+
+class ExerciseAssessmentApp:
+    def __init__(self):
+        self.recognizer = sr.Recognizer()
+        self.exercise_standards = {
+            "強度運動": {"weekly_minutes": 75, "sessions": 3},
+            "中度運動": {"weekly_minutes": 150, "sessions": 5},
+            "走路": {"daily_steps": 8000}
+        }
+    
+    def record_voice(self, duration=30):
+        """錄製用戶語音"""
+        with sr.Microphone() as source:
+            print("請描述您的運動習慣...")
+            audio = self.recognizer.listen(source, timeout=duration)
+        return audio
+    
+    def transcribe_audio(self, audio):
+        """使用Google Cloud Speech-to-Text轉換語音"""
+        try:
+            text = self.recognizer.recognize_google(audio, language='zh-TW')
+            return text
+        except Exception as e:
+            print(f"語音識別錯誤: {str(e)}")
+            return None
+    
+    def analyze_exercise_pattern(self, text):
+        """分析運動描述文本"""
+        results = {
+            "強度運動": {"minutes": 0, "sessions": 0},
+            "中度運動": {"minutes": 0, "sessions": 0},
+            "走路": {"steps": 0}
+        }
+        
+        # 解析運動時間和頻率
+        patterns = {
+            "強度運動": r"(?:跑步|游泳|籃球|網球).*?(\d+).*?分鐘.*?(\d+).*?次",
+            "中度運動": r"(?:快走|騎車|瑜伽).*?(\d+).*?分鐘.*?(\d+).*?次",
+            "走路": r"(?:走路|步行).*?(\d+).*?步"
+        }
+        
+        for exercise_type, pattern in patterns.items():
+            matches = re.finditer(pattern, text)
+            for match in matches:
+                if exercise_type != "走路":
+                    minutes, sessions = map(int, match.groups())
+                    results[exercise_type]["minutes"] += minutes
+                    results[exercise_type]["sessions"] += sessions
+                else:
+                    steps = int(match.group(1))
+                    results[exercise_type]["steps"] += steps
+        
+        return results
+    
+    def evaluate_exercise(self, exercise_data):
+        """評估運動是否達標"""
+        evaluation = {
+            "達標項目": [],
+            "未達標項目": [],
+            "建議": []
+        }
+        
+        # 評估各類運動
+        for exercise_type, data in exercise_data.items():
+            if exercise_type in ["強度運動", "中度運動"]:
+                weekly_minutes = data["minutes"] * data["sessions"]
+                required_minutes = self.exercise_standards[exercise_type]["weekly_minutes"]
+                required_sessions = self.exercise_standards[exercise_type]["sessions"]
+                
+                if weekly_minutes >= required_minutes and data["sessions"] >= required_sessions:
+                    evaluation["達標項目"].append(f"{exercise_type}（每週{weekly_minutes}分鐘，{data['sessions']}次）")
+                else:
+                    evaluation["未達標項目"].append(f"{exercise_type}（目前：每週{weekly_minutes}分鐘，{data['sessions']}次）")
+                    evaluation["建議"].append(
+                        f"建議增加{exercise_type}時間至每週{required_minutes}分鐘，分{required_sessions}次進行"
+                    )
+            
+            elif exercise_type == "走路":
+                daily_steps = data["steps"]
+                required_steps = self.exercise_standards[exercise_type]["daily_steps"]
+                
+                if daily_steps >= required_steps:
+                    evaluation["達標項目"].append(f"每日步數（{daily_steps}步）")
+                else:
+                    evaluation["未達標項目"].append(f"每日步數（目前：{daily_steps}步）")
+                    evaluation["建議"].append(f"建議增加每日步行量至{required_steps}步")
+        
+        return evaluation
+    
+    def generate_report(self, evaluation):
+        """生成評估報告"""
+        report = "運動習慣評估報告\n"
+        report += "=" * 30 + "\n\n"
+        
+        if evaluation["達標項目"]:
+            report += "✅ 已達標項目：\n"
+            for item in evaluation["達標項目"]:
+                report += f"- {item}\n"
+            report += "\n"
+        
+        if evaluation["未達標項目"]:
+            report += "❌ 未達標項目：\n"
+            for item in evaluation["未達標項目"]:
+                report += f"- {item}\n"
+            report += "\n"
+        
+        if evaluation["建議"]:
+            report += "📝 改善建議：\n"
+            for suggestion in evaluation["建議"]:
+                report += f"- {suggestion}\n"
+        
+        return report
+    
+    def run(self):
+        """運行應用程序"""
+        # 1. 錄製語音
+        audio = self.record_voice()
+        
+        # 2. 轉換語音為文字
+        text = self.transcribe_audio(audio)
+        if not text:
+            return "無法識別語音，請重試"
+        
+        # 3. 分析運動模式
+        exercise_data = self.analyze_exercise_pattern(text)
+        
+        # 4. 評估運動情況
+        evaluation = self.evaluate_exercise(exercise_data)
+        
+        # 5. 生成報告
+        report = self.generate_report(evaluation)
+        
+        return report
