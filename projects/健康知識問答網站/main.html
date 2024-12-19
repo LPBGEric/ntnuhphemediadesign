@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<!-- 前面的 head 和 style 部分保持不變 -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康知識問答</title>
+    <style>
+        /* 原有的所有 CSS 樣式保持不變 */
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        #result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .correct {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .incorrect {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-style: italic;
+        }
+        .recording {
+            background-color: #ffe6e6;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .microphone-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        /* 新增：進度顯示樣式 */
+        #progress {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>健康知識問答</h1>
+        <div id="progress"></div>
+        <div id="question"></div>
+        <div class="controls">
+            <button id="startVoice">
+                <span id="micIcon">🎤</span>
+                開始語音輸入
+            </button>
+            <button id="stopVoice" disabled>停止語音輸入</button>
+            <button id="checkAnswer">檢查答案</button>
+            <button id="nextQuestion">下一題</button>
+        </div>
+        <div id="status"></div>
+        <input type="text" id="answerInput" placeholder="在此輸入答案或使用語音輸入" style="width: 100%; padding: 10px; margin: 10px 0;">
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "每天建議喝多少水？",
+                answer: "2000毫升",
+                alternatives: ["2公升", "兩公升", "2000cc"]
+            },
+            {
+                question: "成人每天建議運動時間是多少？",
+                answer: "30分鐘",
+                alternatives: ["半小時", "0.5小時"]
+            },
+            {
+                question: "健康的睡眠時間建議是多少小時？",
+                answer: "7-9小時",
+                alternatives: ["七到九小時", "7到9小時"]
+            },
+            {
+                question: "理想的身體質量指數（BMI）範圍是多少？",
+                answer: "18.5-24",
+                alternatives: ["18.5到24", "18.5至24"]
+            },
+            {
+                question: "成人的正常血壓範圍是多少？",
+                answer: "120/80",
+                alternatives: ["120比80", "收縮壓120舒張壓80"]
+            },
+            {
+                question: "每天建議攝取的蔬菜份量是多少？",
+                answer: "3份",
+                alternatives: ["三份", "3份蔬菜"]
+            },
+            {
+                question: "成人每週建議運動幾天？",
+                answer: "3-5天",
+                alternatives: ["三到五天", "3至5天"]
+            },
+            {
+                question: "每天建議的水果攝取量是多少份？",
+                answer: "2份",
+                alternatives: ["兩份", "2份水果"]
+            },
+            {
+                question: "成人空腹血糖的正常值是多少？",
+                answer: "100以下",
+                alternatives: ["小於100", "100mg/dL以下"]
+            },
+            {
+                question: "建議多久測量一次體重？",
+                answer: "每週一次",
+                alternatives: ["一週一次", "週一次"]
+            },
+            {
+                question: "理想的腰圍標準，男性應該小於幾公分？",
+                answer: "90公分",
+                alternatives: ["90cm", "九十公分"]
+            },
+            {
+                question: "理想的腰圍標準，女性應該小於幾公分？",
+                answer: "80公分",
+                alternatives: ["80cm", "八十公分"]
+            },
+            {
+                question: "每餐應該多久吃完比較健康？",
+                answer: "20分鐘",
+                alternatives: ["二十分鐘", "20分"]
+            },
+            {
+                question: "一般建議幾歲開始定期做健康檢查？",
+                answer: "40歲",
+                alternatives: ["四十歲", "40"]
+            },
+            {
+                question: "建議每天走幾步路最好？",
+                answer: "10000步",
+                alternatives: ["一萬步", "10000"]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let isRecording = false;
+        let recognition = null;
+        const synthesis = window.speechSynthesis;
+
+        // 其餘 JavaScript 函數保持不變，只新增更新進度的函數
+        function updateProgress() {
+            const progressElement = document.getElementById('progress');
+            progressElement.textContent = `進度：${currentQuestionIndex + 1} / ${questions.length}`;
+        }
+
+        // 修改 displayQuestion 函數，加入進度更新
+        function displayQuestion() {
+            const questionElement = document.getElementById('question');
+            questionElement.innerHTML = `<h2>問題 ${currentQuestionIndex + 1}：${questions[currentQuestionIndex].question}</h2>`;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('result').innerHTML = '';
+            showStatus('準備就緒', '');
+            updateProgress();
+        }
+
+        // 其餘所有函數保持不變
+        function initializeSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('您的瀏覽器不支援語音辨識功能，請使用Chrome瀏覽器。');
+                document.getElementById('startVoice').disabled = true;
+                return null;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+           
+            recognition.onstart = () => {
+                isRecording = true;
+                updateUI();
+                showStatus('正在聆聽...', 'recording');
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                updateUI();
+                if (!document.getElementById('answerInput').value) {
+                    showStatus('未檢測到語音，請重試', 'error');
+                }
+            };
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    document.getElementById('answerInput').value = finalTranscript;
+                    showStatus('已接收語音輸入', 'success');
+                } else if (interimTranscript) {
+                    document.getElementById('answerInput').value = interimTranscript;
+                    showStatus('正在處理語音...', 'processing');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('語音辨識錯誤:', event.error);
+                let errorMessage = '語音辨識發生錯誤';
+                switch (event.error) {
+                    case 'no-speech':
+                        errorMessage = '未檢測到語音，請重試';
+                        break;
+                    case 'audio-capture':
+                        errorMessage = '無法存取麥克風';
+                        break;
+                    case 'not-allowed':
+                        errorMessage = '請允許使用麥克風權限';
+                        break;
+                }
+                showStatus(errorMessage, 'error');
+                isRecording = false;
+                updateUI();
+            };
+
+            return recognition;
+        }
+
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = type;
+        }
+
+        function updateUI() {
+            const startButton = document.getElementById('startVoice');
+            const stopButton = document.getElementById('stopVoice');
+            const micIcon = document.getElementById('micIcon');
+
+            startButton.disabled = isRecording;
+            stopButton.disabled = !isRecording;
+           
+            if (isRecording) {
+                document.getElementById('status').classList.add('recording');
+                micIcon.textContent = '⏺';
+            } else {
+                document.getElementById('status').classList.remove('recording');
+                micIcon.textContent = '🎤';
+            }
+        }
+
+        function init() {
+            recognition = initializeSpeechRecognition();
+            displayQuestion();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('startVoice').addEventListener('click', startVoiceInput);
+            document.getElementById('stopVoice').addEventListener('click', stopVoiceInput);
+            document.getElementById('checkAnswer').addEventListener('click', checkAnswer);
+            document.getElementById('nextQuestion').addEventListener('click', nextQuestion);
+        }
+
+        function startVoiceInput() {
+            if (!recognition) {
+                showStatus('瀏覽器不支援語音辨識', 'error');
+                return;
+            }
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('開始語音辨識時發生錯誤:', error);
+                showStatus('無法啟動語音辨識，請重試', 'error');
+            }
+        }
+
+        function stopVoiceInput() {
+            if (recognition) {
+                recognition.stop();
+                showStatus('語音輸入已停止', '');
+            }
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answerInput').value.trim();
+            if (!userAnswer) {
+                showStatus('請輸入答案', 'error');
+                return;
+            }
+
+            const currentQuestion = questions[currentQuestionIndex];
+            const isCorrect = [currentQuestion.answer, ...currentQuestion.alternatives]
+                .some(answer => userAnswer.toLowerCase() === answer.toLowerCase());
+
+            const resultElement = document.getElementById('result');
+            resultElement.className = isCorrect ? 'correct' : 'incorrect';
+           
+            const resultMessage = isCorrect ?
+                `正確！答案是${currentQuestion.answer}` :
+                `不正確。正確答案是${currentQuestion.answer}`;
+           
+            resultElement.textContent = resultMessage;
+
+            const utterance = new SpeechSynthesisUtterance(resultMessage);
+            utterance.lang = 'zh-TW';
+            synthesis.speak(utterance);
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+            displayQuestion();
+        }
+
+        init();
+    </script>
+</body>
+</html>
