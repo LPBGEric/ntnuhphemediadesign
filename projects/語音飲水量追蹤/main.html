@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水分追蹤助理</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f8ff;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-4 text-blue-600">💧 水分追蹤助理 💧</h1>
+        
+        <div id="waterIntakeDisplay" class="mb-4 text-center">
+            <p class="text-lg">今日飲水量: <span id="totalWater" class="font-bold text-blue-500">0</span> 毫升</p>
+            <p id="remainingWaterGoal" class="text-sm text-gray-600">每日目標: 2000 毫升</p>
+            <p id="dateDisplay" class="text-xs text-gray-500"></p>
+        </div>
+
+        <div class="mb-4">
+            <label for="waterAmount" class="block mb-2 text-sm font-medium">輸入飲水量 (毫升)</label>
+            <input 
+                type="number" 
+                id="waterAmount" 
+                class="w-full p-2 border rounded-md"
+                placeholder="請輸入飲水量"
+            >
+        </div>
+
+        <div class="space-y-2">
+            <button 
+                id="voiceRecordBtn" 
+                class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
+            >
+                🎙️ 語音記錄飲水量
+            </button>
+
+            <button 
+                id="manualAddBtn" 
+                class="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition"
+            >
+                ✋ 手動添加
+            </button>
+        </div>
+
+        <div id="notificationArea" class="mt-4 text-center text-sm text-blue-600"></div>
+
+        <div id="hydrationTips" class="mt-4 bg-blue-50 p-3 rounded-md text-sm text-blue-800 hidden">
+            <h3 class="font-bold mb-2">💧 補水建議</h3>
+            <p id="hydrationTipText"></p>
+        </div>
+
+        <div id="healthPromotions" class="mt-4 bg-green-50 p-3 rounded-md text-sm text-green-800 hidden">
+            <h3 class="font-bold mb-2">🌟🌟🌟</h3>
+            <p id="promotionText"></p>
+        </div>
+
+        <div id="waterHistory" class="mt-4">
+            <h2 class="text-lg font-semibold mb-2">飲水記錄</h2>
+            <ul id="historyList" class="space-y-1"></ul>
+        </div>
+    </div>
+
+    <script>
+        class WaterIntakeTracker {
+            constructor() {
+                this.dailyGoal = 2000; // 預設每日目標 2000 毫升
+                this.healthPromotions = [
+                    "適量飲水有助於促進新陳代謝，能夠排毒、減重，幫助維持健康生活！",
+                    "喝足水分能保濕、抗衰老、潤澤，保持肌膚彈性而且更水潤，活得越來越年輕！",
+                    "水分是生命之源，適量飲水能增強免疫力！",
+                    "多喝水能幫助腸胃消化，消脹氣、解便秘，健康一身輕！",
+                    "每天喝足夠的水，保持血管健康，還能穩定血壓！",
+		    "喝水讓大腦變靈活，加速反應力！",
+                    "保持喝水習慣，健康喝水，讓身體更有活力！"
+                ];
+                
+                this.data = {
+                    date: this.getTodayDate(),
+                    totalWater: 0,
+                    history: []
+                };
+
+                this.initEventListeners();
+                this.loadFromLocalStorage();
+                this.checkAndResetDailyData();
+                this.updateDisplay();
+                this.requestNotificationPermission();
+            }
+
+            getTodayDate() {
+                const today = new Date();
+                return today.toISOString().split('T')[0]; // 返回 YYYY-MM-DD 格式
+            }
+
+            checkAndResetDailyData() {
+                const today = this.getTodayDate();
+
+                if (this.data.date !== today) {
+                    this.data = {
+                        date: today,
+                        totalWater: 0,
+                        history: []
+                    };
+                    this.saveToLocalStorage();
+                    this.showMessage('新的一天，飲水量已重置', 'info');
+                }
+            }
+
+            initEventListeners() {
+                document.getElementById('voiceRecordBtn').addEventListener('click', () => this.startVoiceRecording());
+                document.getElementById('manualAddBtn').addEventListener('click', () => this.addManualWater());
+            }
+
+            speakMessage(message) {
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = 'zh-TW'; // 設定語言為繁體中文
+                speechSynthesis.speak(utterance);
+            }
+
+            showMessage(message, type = 'info') {
+                const notificationArea = document.getElementById('notificationArea');
+                notificationArea.textContent = message;
+
+                notificationArea.className = type === 'warning' 
+                    ? 'mt-4 text-center text-sm text-red-600'
+                    : 'mt-4 text-center text-sm text-blue-600';
+
+                // 語音播報
+                this.speakMessage(message);
+
+                setTimeout(() => {
+                    notificationArea.textContent = '';
+                }, 3000);
+            }
+
+            showHealthPromotion() {
+                const promotionText = document.getElementById('promotionText');
+                const healthPromotions = document.getElementById('healthPromotions');
+
+                const selectedPromotion = this.healthPromotions[Math.floor(Math.random() * this.healthPromotions.length)];
+                promotionText.textContent = selectedPromotion;
+                healthPromotions.classList.remove('hidden');
+
+                // 語音播報健康促進標語
+                this.speakMessage(selectedPromotion);
+            }
+
+            showHydrationTips(remainingWater) {
+                const hydrationTips = document.getElementById('hydrationTips');
+                const hydrationTipText = document.getElementById('hydrationTipText');
+                
+                hydrationTips.classList.remove('hidden');
+
+                const tips = [
+                    `您還需要喝 ${remainingWater} 毫升水。一杯水大約250毫升，再喝1-2杯就可以達標！`,
+                    `距離今日飲水目標還有 ${remainingWater} 毫升。喝溫水有助於身體代謝。`,
+                    `加油！您還需要喝 ${remainingWater} 毫升水。記得每小時喝一小杯水。`,
+                    `再喝 ${remainingWater} 毫升就達標了。多喝水可以幫助身體排毒！`,
+                    `還剩 ${remainingWater} 毫升水沒喝。建議分次喝水，保持身體水分。`
+                ];
+
+                const selectedTip = tips[Math.floor(Math.random() * tips.length)];
+                hydrationTipText.textContent = selectedTip;
+
+                // 語音播報補水建議
+                this.speakMessage(selectedTip);
+            }
+
+            startVoiceRecording() {
+                if ('webkitSpeechRecognition' in window) {
+                    const recognition = new webkitSpeechRecognition();
+                    recognition.lang = 'zh-TW';
+
+                    recognition.onstart = () => {
+                        this.showMessage('請開始說出飲水量');
+                    };
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        const waterAmount = parseInt(transcript);
+
+                        if (!isNaN(waterAmount) && waterAmount > 0) {
+                            this.addWater(waterAmount);
+                        } else {
+                            this.showMessage('無法識別飲水量，請清晰說出數字', 'warning');
+                        }
+                    };
+
+                    recognition.start();
+                } else {
+                    this.showMessage('您的瀏覽器不支持語音識別', 'warning');
+                }
+            }
+
+            addManualWater() {
+                const amountInput = document.getElementById('waterAmount');
+                const amount = parseInt(amountInput.value);
+
+                if (!isNaN(amount) && amount > 0) {
+                    this.addWater(amount);
+                    amountInput.value = '';
+                } else {
+                    this.showMessage('請輸入有效的飲水量', 'warning');
+                }
+            }
+
+            addWater(amount) {
+                this.checkAndResetDailyData();
+
+                this.data.totalWater += amount;
+                this.data.history.unshift({
+                    amount: amount,
+                    timestamp: new Date().toLocaleString()
+                });
+
+                this.saveToLocalStorage();
+                this.updateDisplay();
+                this.checkHydrationReminder(amount);
+                this.showMessage(`已成功添加 ${amount} 毫升水量`);
+
+                if (this.data.totalWater > this.dailyGoal) {
+                    this.showHealthPromotion();
+                }
+            }
+
+            checkHydrationReminder(addedAmount) {
+                const remainingGoal = this.dailyGoal - this.data.totalWater;
+
+                if (remainingGoal > 0) {
+                    this.showHydrationTips(remainingGoal);
+
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('💧 補水提醒', { 
+                            body: `還需要補充 ${remainingGoal} 毫升水分`
+                        });
+                    }
+                } else {
+                    document.getElementById('hydrationTips').classList.add('hidden');
+                    this.showMessage('今日飲水目標已達成！');
+                }
+            }
+
+            updateDisplay() {
+                this.checkAndResetDailyData();
+
+                document.getElementById('totalWater').textContent = this.data.totalWater;
+                document.getElementById('remainingWaterGoal').textContent = `每日目標: 2000 毫升 (尚餘 ${Math.max(this.dailyGoal - this.data.totalWater, 0)} 毫升)`;
+
+                document.getElementById('dateDisplay').textContent = `日期：${this.data.date}`;
+
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '';
+                this.data.history.slice(0, 5).forEach(entry => {
+                    const li = document.createElement('li');
+                    li.textContent = `${entry.timestamp}: ${entry.amount} 毫升`;
+                    li.className = 'text-sm text-gray-600';
+                    historyList.appendChild(li);
+                });
+            }
+
+            saveToLocalStorage() {
+                localStorage.setItem('waterIntakeData', JSON.stringify(this.data));
+            }
+
+            loadFromLocalStorage() {
+                const savedData = localStorage.getItem('waterIntakeData');
+                if (savedData) {
+                    this.data = JSON.parse(savedData);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new WaterIntakeTracker();
+        });
+    </script>
+</body>
+</html>

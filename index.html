@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<!--
+Copyright [2024] NTNU
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期末專題展演</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            overflow-x: hidden; /* Prevent horizontal stretching */
+        }
+
+        header {
+            background-color: #4e070b;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+        }
+
+        header .logo {
+            display: flex; /* Flexbox for alignment */
+            align-items: center; /* Vertically align logos */
+            justify-content: flex-start; /* Align everything to the left */
+            gap: 10px; /* Add spacing between the two logos */
+            flex: 1; /* Allow logos to scale together */
+        }
+
+        header .logo img {
+            max-height: 60px; /* Ensure logos have consistent height */
+            height: auto; /* Scale logos proportionally */
+            object-fit: contain;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-align: center;
+            flex-basis: 100%; /* Full width for small screens */
+            word-wrap: break-word;
+        }
+
+        footer {
+            margin: 0;
+            font-size: 16px;
+            text-align: center;
+            flex-basis: 100%; /* Full width for small screens */
+            word-wrap: break-word;
+        }
+
+        .slider {
+            position: relative;
+            overflow: hidden;
+            max-width: 100%;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .slides {
+            display: flex;
+            transition: transform 0.5s ease;
+        }
+
+        /* Slide styles */
+        .slide {
+            min-width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            position: relative;
+            /*padding-bottom: 20px; /* Add space at the bottom for both title and info */
+        }
+        .slide iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+            background: #f9f9f9;
+        }
+
+        /* Title styling */
+        .slide-title {
+            position: absolute;
+            bottom: 50px; /* Position it above the slide's bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 20px;
+            width: auto; /* Make width adapt to content */
+            max-width: 90%; /* Limit the maximum width */
+            word-wrap: break-word;
+            text-align: center;
+            opacity: 0.8; /* Slight opacity for floating effect */
+            transition: opacity 0.3s ease;
+        }
+
+        /* Hover effect for the title */
+        .slide-title:hover {
+            opacity: 1; /* Full opacity on hover */
+        }
+
+        .navigation {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            transform: translateY(-50%);
+        }
+
+        .navigation button {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .navigation button:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        
+        /* Floating info styling above the slide */
+        .project-info {
+            position: absolute;
+            bottom: 5px; /* Position it slightly above the title */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            width: auto; /* Make width adapt to content */
+            max-width: 90%; /* Limit the maximum width */
+            word-wrap: break-word;
+            text-align: center;
+            opacity: 0.8; /* Slight opacity for floating effect */
+            transition: opacity 0.3s ease;
+        }
+
+        .project-info:hover {
+            opacity: 1; /* Full opacity on hover for better visibility */
+        }
+
+
+        @media (max-width: 768px) {
+            header .logo img {
+                max-height: 40px; /* Scale logos for medium screens */
+            }
+
+            header h1 {
+                font-size: 18px; /* Adjust font size */
+            }
+
+            .slide iframe {
+                height: 300px; /* Adjust for smaller screens */
+            }
+
+            .slide-title {
+                font-size: 18px; /* Adjust title size for small screens */
+            }
+
+            .project-info {
+                font-size: 14px; /* Adjust font size for project info */
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            header h1 {
+                font-size: 18px;
+                text-align: center;
+            }
+
+            header h1::after {
+                content: '';
+                display: block;
+            }
+
+            header h1.split {
+                display: block;
+            }
+
+            .navigation button {
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="ntnu_logo_B814.png" alt="NTNU Logo" class="left-logo">
+            <img src="ntnu_departemt_HE.png" alt="Department Logo" class="right-logo">
+        </div>
+        <h1 class="split">
+            健康促進與衛生教育媒體設計製作 <br> 期末專題展演
+        </h1>
+    </header>
+
+    <!-- Slideshow -->
+    <div class="slider">
+        <div class="slides" id="slides">
+            <!-- Slides will be dynamically inserted here -->
+        </div>
+        <div class="navigation">
+            <button id="prev">&#10094; 上一個</button>
+            <button id="next">下一個 &#10095;</button>
+        </div>
+    </div>
+
+    <!-- Dropdown List for Projects -->
+    <div id="projectList" style="padding: 20px;">
+        <h2>專案列表</h2>
+    </div>
+
+    <footer>
+        <div>
+            2024 期末專題展演。
+        </div>
+    </footer>
+
+    <script>
+        const projects = ["語音飲水量追蹤", "步行步數記錄程式", "健康知識大挑戰", "語音睡眠品質評估", "語音運動習慣評估"];
+        const projectListContainer = document.getElementById('projectList');
+        const slidesContainer = document.getElementById('slides');
+        let currentIndex = 0;
+        let slideInterval;
+
+        fetch('projects/info.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch info.json: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Create Dropdown for Projects
+                projects.forEach(project => {
+                    const dropdown = document.createElement('div');
+                    dropdown.style.marginBottom = "15px";
+
+                    const projectName = document.createElement('button');
+                    projectName.textContent = project;
+                    projectName.style.display = "block";
+                    projectName.style.padding = "10px";
+                    projectName.style.width = "100%";
+                    projectName.style.textAlign = "left";
+                    projectName.style.backgroundColor = "#f1f1f1";
+                    projectName.style.border = "1px solid #ccc";
+                    projectName.style.cursor = "pointer";
+
+                    // Toggle details on click
+                    projectName.addEventListener('click', () => {
+                        projectDetails.style.display = projectDetails.style.display === 'block' ? 'none' : 'block';
+                    });
+
+                    const projectDetails = document.createElement('div');
+                    projectDetails.style.display = 'none';
+                    projectDetails.style.padding = "10px";
+                    projectDetails.style.backgroundColor = "#fafafa";
+                    projectDetails.style.border = "1px solid #ddd";
+
+                    const projectInfo = data[project];
+                    if (projectInfo) {
+                        projectDetails.innerHTML = `
+                            <p><strong>作者:</strong> ${projectInfo.author}</p>
+                            <p><strong>組別:</strong> ${projectInfo.team}</p>
+                            <p><strong>描述:</strong> ${projectInfo.description || 'N/A'}</p>
+                        `;
+                    } else {
+                        projectDetails.textContent = `No info available for ${project}`;
+                    }
+
+                    dropdown.appendChild(projectName);
+                    dropdown.appendChild(projectDetails);
+                    projectListContainer.appendChild(dropdown);
+
+                    // Add Project to Slides
+                    const slide = document.createElement('div');
+                    slide.classList.add('slide');
+
+                    const iframe = document.createElement('iframe');
+                    iframe.src = `projects/${project}/main.html`;
+                    slide.appendChild(iframe);
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.classList.add('slide-title');
+                    titleDiv.textContent = project;
+                    slide.appendChild(titleDiv);
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.classList.add('project-info');
+                    infoDiv.textContent = projectInfo
+                        ? `作者: ${projectInfo.author}\n組別: ${projectInfo.team}`
+                        : `No info available for ${project}`;
+                    slide.appendChild(infoDiv);
+
+                    slidesContainer.appendChild(slide);
+                });
+
+                initializeSlider();
+            })
+            .catch(error => {
+                console.error('Error loading project info:', error);
+
+                // Fallback for Projects
+                projects.forEach(project => {
+                    const dropdown = document.createElement('div');
+                    dropdown.textContent = `Failed to load info for ${project}`;
+                    projectListContainer.appendChild(dropdown);
+
+                    const slide = document.createElement('div');
+                    slide.classList.add('slide');
+
+                    const iframe = document.createElement('iframe');
+                    iframe.src = `projects/${project}/main.html`;
+                    slide.appendChild(iframe);
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.classList.add('slide-title');
+                    titleDiv.textContent = project;
+                    slide.appendChild(titleDiv);
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.classList.add('project-info');
+                    infoDiv.textContent = 'Failed to load project info.';
+                    slide.appendChild(infoDiv);
+
+                    slidesContainer.appendChild(slide);
+                });
+
+                initializeSlider();
+            });
+
+        function initializeSlider() {
+            const slides = document.querySelectorAll('.slide');
+
+            function showSlide(index) {
+                const totalSlides = slides.length;
+                currentIndex = (index + totalSlides) % totalSlides;
+                slidesContainer.style.transform = `translateX(-${currentIndex * 100}%)`;
+                resetSlideInterval();
+            }
+
+            document.getElementById('prev').addEventListener('click', () => {
+                showSlide(currentIndex - 1);
+            });
+
+            document.getElementById('next').addEventListener('click', () => {
+                showSlide(currentIndex + 1);
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowLeft') showSlide(currentIndex - 1);
+                else if (event.key === 'ArrowRight') showSlide(currentIndex + 1);
+                else if (event.key === 'Enter') {
+                    const project = projects[currentIndex];
+                    window.location.href = `projects/${project}/main.html`;
+                }
+            });
+
+            function resetSlideInterval() {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(() => showSlide(currentIndex + 1), 5000);
+            }
+
+            resetSlideInterval();
+            showSlide(currentIndex);
+        }
+    </script>
+</body>
+
+
+</html>
